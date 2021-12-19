@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.zerock.mapper.MainMapper">
+
+<select id="getCate" resultType="org.zerock.domain.VideoVO">
+select  
+    DISTINCT category, hits
+from
+   (select  
+   category, hits, rank() over( partition by category order by hits desc) as rnk
+   from tbl_video)
+where rnk='1' and hits != 0 
+order by hits desc
+</select>
+
+<select id="getTotalCount" resultType="int">
+<![CDATA[select count(*) from tbl_video
+	where
+
+	vno>0
+]]>
+</select>
+
+<!-- 영상보기 -->
+<select id="read" resultType="org.zerock.domain.VideoVO">
+	select * from tbl_video where vno = #{vno}
+</select>
+
+<select id="getMainList" resultType="org.zerock.domain.VideoVO">
+<![CDATA[
+select
+	vno, title, content, hits, category, url
+from
+	(select /*+index_desc(tbl_video) */
+	rownum rn, vno, title, content, hits, category ,url
+	from tbl_video
+	where category = #{category} and rownum < 5 )
+
+	order by hits desc
+]]>
+</select>
+
+</mapper>

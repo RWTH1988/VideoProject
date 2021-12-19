@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- (S.662~3)회원 mapper 설정 -->
+<mapper namespace="org.zerock.mapper.MemberMapper">
+	
+	<resultMap type="org.zerock.domain.MemberVO" id="memberMap">
+		<id property="userid" column="userid" />
+		<result property="userid" column="userid" />
+		<result property="userpw" column="userpw" />
+		<result property="userName" column="userName" />
+		<result property="regDate" column="regDate" />
+		<result property="updateDate" column="updateDate" />
+		<result property="userGender" column="userGender" />
+		<result property="userBirth" column="userBirth" />		
+		<result property="userTel" column="userTel" />
+		<result property="userEmail" column="userEmail" />
+		<result property="postcode" column="postcode" />
+		<result property="roadAddr" column="roadAddr" />
+		<result property="jibunAddr" column="jibunAddr" />
+		<result property="detailAddr" column="detailAddr" />				
+		<collection property="authList" resultMap="authMap"></collection>	
+	</resultMap>
+	
+	<resultMap type="org.zerock.domain.AuthVO" id="authMap">
+		<result property="userid" column="userid" />
+		<result property="auth" column="auth" />
+	</resultMap>
+	
+	<sql id="admin">
+		<trim prefix="(" suffix=") and " prefixOverrides="or">
+			<foreach item="type" collection="typeArr">
+				<trim prefix="or">
+					<choose>
+						<when test="type=='N'.toString()">
+							userName like '%'||#{keyword}||'%'							
+						</when>
+						<when test="type=='B'.toString()">
+							userBirth like '%'||#{keyword}||'%'
+						</when>
+						<when test="type=='I'.toString()">
+							userid like '%'||#{keyword}||'%'
+						</when>
+					</choose>
+				</trim>
+			</foreach>
+		</trim>
+	</sql>
+	
+	<!-- 로그인  -->
+	<select id="read" resultMap="memberMap"> 
+		select mem.userid, userpw, username, enabled, regdate, updatedate, 
+			userGender, userBirth, userTel, userEmail, postcode, 
+			roadAddr, jibunAddr, detailAddr, auth
+		from tbl_member mem left outer join tbl_member_auth auth on mem.userid = auth.userid
+		where mem.userid = #{userid}		
+	</select>
+	
+	<!-- 회원가입 & 권한부여 -->
+	<insert id="join">
+		insert into tbl_member (userid, userpw, username, userGender, userBirth, userTel, userEmail, postcode, roadAddr, jibunAddr, detailAddr)
+		values(#{userid}, #{userpw}, #{userName}, #{userGender},#{userBirth}, #{userTel}, #{userEmail},#{postcode},#{roadAddr}, #{jibunAddr}, #{detailAddr})
+	</insert>
+ 	<insert id="joinAuth">
+		insert into tbl_member_auth (userid)
+		values((select userid from tbl_member where userid = #{userid}))
+	</insert>
+	<!-- 회원 탈퇴 & 권한삭제 -->
+	<delete id="delete">
+		delete from tbl_member
+		where userid = #{userid}
+	</delete>	
+	<delete id="deleteAuth">
+		delete from tbl_member_auth
+		where userid = #{userid}
+	</delete>
+	
+	<!-- 회원정보 조회 -->
+	<select id="get" resultMap="memberMap">
+		select * from tbl_member
+		where userid = #{userid}	
+	</select>
+	
+	<!-- 회원정보 수정 -->
+	<update id="modify">
+		update tbl_member
+		set userpw = #{userpw}, 
+			userBirth = #{userBirth},
+			userTel = #{userTel}, 
+			userEmail = #{userEmail}, 
+			postcode = #{postcode}, 
+			roadAddr = #{roadAddr}, 
+			jibunAddr = #{jibunAddr}, 
+			detailAddr = #{detailAddr}
+		where userid = #{userid}	
+	</update>
+	
+	<!-- 패스워드 체크 -->
+	<select id="pwCheck" resultType="int">
+		select count(*) from tbl_member
+		where userid = #{userid}
+		and userpw = #{userpw}
+	</select>
+	<!-- 아이디 중복 체크 -->
+	<select id="idCheck" resultType="int">
+		select count(*) from tbl_member
+		where userid = #{userid}
+	</select>
+	
+<!-- ####################### 관리자 페이지 관련 ####################### -->
+	<select id="getListWithPaging" parameterType="map" resultType="org.zerock.domain.MemberVO">
+	<![CDATA[			
+		select userid, userpw, username, enabled, regdate, updatedate, 
+			userGender, userBirth, userTel, userEmail, postcode, 
+			roadAddr, jibunAddr, detailAddr
+		from (
+			select /*+INDEX_DESC(tbl_member pk_member) */
+		    rownum rn,userid, userpw, username, enabled, regdate, updatedate, 
+			userGender, userBirth, userTel, userEmail, postcode, 
+			roadAddr, jibunAddr, detailAddr
+		    from tbl_member
+		    where
+	]]>
+	
+	<include refid="admin"/>
+	
+	<![CDATA[
+		    rownum<=#{pageNum} * #{amount}
+		) where rn>(#{pageNum}-1) * #{amount}
+	]]>
+	</select>
+	
+	<select id="getTotalCount" resultType="int">
+		select count(*) from tbl_member 
+		where
+		
+	<include refid="admin"/>
+		
+		userid is not null
+	</select>
+	
+
+</mapper>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="http://www.springframework.org/schema/security 
+		http://www.springframework.org/schema/security/spring-security.xsd
+		http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+<!-- (S.630) AccessDeniedHandler를 이용하는 방법  -->
+<bean id="customAccessDenied" 
+	class="org.zerock.security.CustomAccessDeniedHandler"></bean>	
+<!-- (S.651~2) BcryptPasswordEncoder
+		: 패스워드를 저장하는 용도로 설계된 해시 함수. 특정 문자열을 암호화하고,
+		    체크 하는쪽에서는 암호화된 패스워드가 일치 여부만 확인하고 다시 원문으로 돌리지는 못함. -->
+<bean id="bcryptPasswordEncoder"
+	class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder" />
+
+<bean id="customUserDetailsService"
+	class="org.zerock.security.CustomUserDetailsService"></bean>
+
+<security:http>
+<!-- seit.618 접근제한 설정 / (S.624)Admin설정 -->
+	<security:intercept-url pattern="/admin/all" access="hasRole('ROLE_ADMIN')"/>
+	<!-- <security:intercept-url pattern="/sample/member" access="hasRole('ROLE_MEMBER')"/>
+	<security:intercept-url pattern="/sample/admin" access="hasRole('ROLE_ADMIN')"/> -->
+
+<!-- (S.639) 로그인 하지 않고 새글 쓰기 할 경우 이동하는 경로 설정 부분!-->	
+	<security:form-login login-page="/member/login" />
+		
+<!-- (S.640) 로그아웃 처리 -->
+	<security:logout logout-url="/member/logout" invalidate-session="true"
+		delete-cookies="remember-me, JSESSION_ID" />
+
+	<!-- (S.630) AccessDeniedHandler를 이용하는 방법  -->
+	<security:access-denied-handler ref="customAccessDenied"/>	
+	<!-- <security:csrf disabled="true"/> csrf공격으로 부터 보호하기 위한 토큰 감추기 설정 -->
+	<security:remember-me data-source-ref="dataSource" 
+						token-validity-seconds="604800"/>	
+</security:http>
+
+<security:authentication-manager>
+	<security:authentication-provider user-service-ref="customUserDetailsService">
+		
+		<security:password-encoder ref="bcryptPasswordEncoder" />
+		
+	</security:authentication-provider>
+</security:authentication-manager>
+
+</beans>

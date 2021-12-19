@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.zerock.mapper.VideoMapper">
+
+<!-- Mybatis 동적 태그 관련 : seit.329~339 참조! -->
+<sql id="criteria">
+	<trim prefix="(" suffix=") AND " prefixOverrides="OR">
+		<foreach item="type" collection="typeArr">
+			<trim prefix="or">
+				<choose>
+					<when test="type == 'T'.toString()">
+						title like '%'||#{keyword}||'%'  
+					</when>
+					<when test="type == 'C'.toString()">
+						content like '%'||#{keyword}||'%'
+					</when>
+					<when test="type == 'Ca'.toString()">
+						category like '%'||#{keyword}||'%'
+					</when>
+				</choose>
+			</trim>
+		</foreach>	
+	</trim>
+</sql>
+
+<insert id="insert">
+	insert into tbl_video(vno, title, content, category, url)
+	values (seq_video.nextval, #{title},#{content},#{category},#{url})
+</insert>
+ 
+<!-- P.294참고 -->
+<select id="getListWithPaging" resultType="org.zerock.domain.VideoVO">
+<![CDATA[
+select
+	vno, title, content, hits, category, regdate, good, noway, url
+from
+	(select /*+index_desc(tbl_video) */
+	rownum rn, vno, title, content, hits, category, regdate, good, noway, url
+	from tbl_video
+	where
+]]>
+<include refid="criteria"></include>
+<![CDATA[	
+		rownum<= #{pageNum} * #{amount})
+where rn > (#{pageNum}-1)*#{amount}
+]]>
+</select>
+
+<select id="getTotalCount" resultType="int">
+<![CDATA[
+select count(*) from tbl_video
+where
+]]>	 
+<include refid="criteria"></include>
+<![CDATA[
+vno>0
+]]>
+</select>
+
+<!-- 영상보기 -->
+<select id="read" resultType="org.zerock.domain.VideoVO">
+	select * from tbl_video where vno = #{vno}
+</select>
+
+<!-- 비디오 게시글 업데이트 -->
+<update id="update">
+	update tbl_video
+	set url = #{url}, title= #{title}, content= #{content}
+	where vno= #{vno}
+</update>
+
+<!-- 비디오 게시글 삭제 -->
+<delete id="delete">
+	delete from tbl_video where vno = #{vno}
+</delete>
+
+<!-- 비디오 조회수  -->
+<update id="hits">
+	update tbl_video
+	set hits = hits + 1
+	where vno = #{vno}
+</update>	
+
+<!-- 비디오 좋아요 횟수  -->
+<update id="good">
+	update tbl_video
+	set good = good + 1
+	where vno = #{vno}
+</update>
+
+<update id="noway">
+	update tbl_video
+	set noway = noway + 1
+	where vno = #{vno}
+</update>
+	
+
+</mapper>
